@@ -1,0 +1,10 @@
+.venv/
+source/
+source-*/
+reference/
+outputs/
+/*.zip
+!/汉语成语源流大辞典.zip
+!/新华成语大词典.zip
+__pycache__/
+.test-tmp/

@@ -1,0 +1,62 @@
+name: Build and release dictionaries
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dictionaries-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Test converters and update metadata
+        run: python -m unittest -v
+      - name: Build, schema-validate, and audit both dictionaries
+        run: python build_all.py --revision "2026.11.08.2.${{ github.run_number }}.${{ github.run_attempt }}" --repository "${{ github.repository }}"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dictionaries-${{ github.sha }}
+          path: outputs/release/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dictionaries-${{ github.sha }}
+          path: outputs/release
+      - name: Publish both stable update channels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python publish_release.py --repository "${{ github.repository }}"
