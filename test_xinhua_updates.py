@@ -22,12 +22,12 @@ class XinhuaTests(unittest.TestCase):
         self.assertFalse(is_article('<div w="一"><a>一丝不苟</a></div>'))
         self.assertTrue(is_article(fixture("甲乙", "jiǎ yǐ", "<js>释义</js>")))
 
-    def test_notes_quotes_and_page_numbers_preserved(self):
+    def test_notes_quotes_preserved_and_page_numbers_dropped(self):
         raw = fixture("甲乙", "jiǎ yǐ", '<js>释义<hh></hh>第二行。</js><jl>甲引文</jl><zhushu>注疏</zhushu><zyi>注意<lai>来源</lai></zyi>')
         article = parse_article("甲乙", raw, 1, {"甲乙"})
         self.assertEqual(article["examples"], 2)
         text = flatten(article["glossary"][0]["content"])
-        self.assertIn("第42页", text)
+        self.assertNotIn("42", text)
         self.assertIn("释义第二行。例证甲引文注疏注意来源", text)
 
     def test_reference_expansion_keeps_own_header_and_reading(self):

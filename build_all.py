@@ -50,9 +50,12 @@ def prepare_release(revision, repository, output_root=ROOT / "outputs"):
                           "articles": report["articles"], "term_rows": report["term_rows"],
                           "zip_bytes": archive_path.stat().st_size, "uncompressed_bytes": uncompressed,
                           "source_sha256": report["source_sha256"]})
-    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, capture_output=True)
+    try:
+        commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, capture_output=True)
+    except FileNotFoundError:  # git not installed
+        commit = None
     info = {"revision": revision, "repository": repository,
-            "commit": commit.stdout.strip() if commit.returncode == 0 else None,
+            "commit": commit.stdout.strip() if commit and commit.returncode == 0 else None,
             "dictionaries": summaries}
     (release_dir / "build-info.json").write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
     expected_files.add("build-info.json")
@@ -63,7 +66,7 @@ def prepare_release(revision, repository, output_root=ROOT / "outputs"):
         notes.append(f'| {item["title"]} | {item["articles"]:,} | {item["term_rows"]:,} | {item["zip_bytes"]/1e6:.2f} MB | {item["uncompressed_bytes"]/1e6:.2f} MB |')
     notes += ["", "Import the dictionary ZIPs directly into Yomitan. Both include separate stable update indexes and download URLs. Future successful main-branch builds publish both channels together with a higher numeric revision.",
               "", "If you installed the first local 汉语成语源流大辞典 build without update metadata, replace it manually once with this release. Subsequent releases can be found through Yomitan's dictionary update check.",
-              "", "Both use the HYDCD stylesheet. All available article text and quotations are retained. Xinhua's unavailable scan pages and reverse-character navigation indexes are omitted; printed page numbers remain visible. Whole-entry see-references expand inline while keeping the referring entry's own reading.",
+              "", "Both use the HYDCD stylesheet. All available article text and quotations are retained. Xinhua's unavailable scan pages and reverse-character navigation indexes are omitted, as are printed page numbers. Whole-entry see-references expand inline while keeping the referring entry's own reading.",
               "", "Validation: official Yomitan v3 schemas, exact source text checks, ZIP CRC checks, and archive-wide glossary/link audits. Reports, previews, build information, and SHA-256 checksums are attached.",
               "", f'Source commit: `{info["commit"] or "local build"}`.']
     (release_dir / "release-notes.md").write_text("\n".join(notes) + "\n", encoding="utf-8")

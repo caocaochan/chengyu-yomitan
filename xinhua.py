@@ -37,12 +37,8 @@ def parse_article(key, raw, sequence, source_keys):
     if traditional != simplified:
         badges.append(node("span", simplified, "simplified-term"))
     result = [node("span", [node("span", badges, "terms-parent")], "first-row-parent")]
-    page = soup.select_one("cypg,.ref")
+    # Print page references (cypg) are dropped; they mean nothing without scans.
     metadata = []
-    if page:
-        digits = re.search(r"\d+", page.get_text())
-        if digits:
-            metadata.append(node("span", f"第{int(digits[0])}页", "note"))
     if original_reading and (not reading or "（" in original_reading):
         metadata.append(node("div", original_reading, "phonology"))
     if metadata:
